@@ -1,0 +1,20 @@
+DESCRIPTION
+We are looking for motivated data scientists with excellent leadership skills, and the ability to develop, automate, and run analytical models of our systems. Academic and/or practical background in Computer Science, Engineering, Operations Research, or Process Control are particularly relevant for this position. Experience in the integration of model-based engineering tools and/or multidisciplinary analysis & optimization is also a plus.
+Locations - Bangalore, Hyderabad, Chennai
+Major Responsibilities:
+- Use data analyses and statistical techniques to develop solutions to improve customer experience and to guide business decision making
+- Identify predictors and causes of business related problems and implement novel approaches related to forecasting and prediction
+- Identify, develop, manage, and execute analyses to uncover areas of opportunity and present written business recommendations
+- Collaborate with multiple teams as a leader of quantitative analysis and where you develop solutions that utilize the highest standards of analytical rigor and data integrity
+- Analyze and solve business problems at their root
+
+“Amazon internships require full-time commitment. During the course of internship, interns should not have any conflicts including but not limited to academic projects, classes or other internships/employment. Any exam related details must be shared with the hiring manager to plan for absence during those days. Specific team norms around working hours will be communicated by the hiring/ reporting manager at the time of commencement of internship. Candidates receiving internship confirmation shall be required to submit declaration of their availability to complete the entire duration of internship, duly signed by a competent authority at their University. Internship commencement will be subject to successful submission of the declaration.”
+
+BASIC QUALIFICATIONS
+- Are 18 years of age or older
+
+PREFERRED QUALIFICATIONS
+- Experience in R/SAS/Matlab and SQL
+- Experience in manipulating/transforming data, model selection, model training, cross-validation and deployment at scale
+- Experience with Machine and Deep Learning toolkits such as MXNet, TensorFlow, Caffe and PyTorch
+- Experience with big data platforms like Apache Spark and Hadoop
