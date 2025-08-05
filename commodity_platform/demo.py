@@ -66,8 +66,8 @@ def demo_alert_subscription():
     print()
 
 def demo_ml_prediction():
-    """Demo: LSTM Price Prediction"""
-    print("🔹 3. ML Model: LSTM Price Prediction Demo")
+    """Demo: PyTorch LSTM Price Prediction"""
+    print("🔹 3. ML Model: PyTorch LSTM Price Prediction Demo")
     print("=" * 50)
     
     try:
@@ -78,11 +78,13 @@ def demo_ml_prediction():
         
         if response.status_code == 200:
             result = response.json()
-            print("✅ LSTM Price Predictions:")
+            print("✅ PyTorch LSTM Price Predictions:")
             print(f"   Commodity: {result['commodity']}")
+            print(f"   Framework: {result.get('framework', 'PyTorch')}")
             print(f"   Next 3 days: {result['next_prices']}")
         else:
-            print("❌ Prediction failed - model may need training")
+            print("❌ Prediction failed - PyTorch model may need training")
+            print("💡 Run: python3 train_pytorch_models.py")
             
     except Exception as e:
         print(f"❌ Error: {e}")
@@ -168,7 +170,7 @@ def main():
     print("🎯 Technology Stack Verification:")
     print("=" * 50)
     print("✅ Backend: FastAPI, yfinance, SQLite, Pydantic")
-    print("✅ ML: LSTM (Keras/TensorFlow), NumPy, Pandas")
+    print("✅ ML: LSTM (PyTorch), NumPy, Pandas")
     print("✅ Dashboard: Streamlit, Plotly charts")
     print("✅ Data Source: Yahoo Finance (yfinance)")
     print()

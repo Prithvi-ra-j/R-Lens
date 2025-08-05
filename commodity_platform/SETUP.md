@@ -12,15 +12,19 @@ Ensure you have Python 3.8+ installed on your system.
 pip install -r requirements.txt
 ```
 
-### 2. Generate Sample Data (Optional)
+### 2. Generate Sample Data & Train PyTorch Models
 
 ```bash
+# Generate sample historical data
 cd data/historical
 python3 generate_sample_data.py
 cd ../..
+
+# Train PyTorch LSTM models (recommended)
+python3 train_pytorch_models.py
 ```
 
-This creates sample historical data in the database for testing.
+This creates sample historical data and trains PyTorch models for predictions.
 
 ### 3. Start the Platform
 
@@ -59,11 +63,13 @@ streamlit run app.py
 
 - View real-time commodity prices
 - Create price alerts (e.g., Gold above $2100)
-- Generate AI price predictions
+- Generate AI price predictions using PyTorch LSTM models
 - Monitor alert history
+- Train custom PyTorch models with your data
 
 ## 🔧 Troubleshooting
 
 - If dependencies fail to install, try: `pip install --upgrade pip`
-- For TensorFlow issues on M1 Mac: `pip install tensorflow-macos`
+- For PyTorch GPU support: Visit https://pytorch.org/get-started/locally/
+- If PyTorch training is slow, consider using GPU: `pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118`
 - If API can't connect, check firewall settings for ports 8000/8501
