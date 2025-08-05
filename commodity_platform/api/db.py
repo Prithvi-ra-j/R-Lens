@@ -14,6 +14,39 @@ class DatabaseHandler:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
+        # Table: alerts (as specified in requirements)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS alerts (
+                user_id TEXT,
+                commodity TEXT,
+                condition TEXT,
+                target_price FLOAT,
+                created_at TIMESTAMP
+            )
+        ''')
+        
+        # Table: price_logs (as specified in requirements)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS price_logs (
+                commodity TEXT,
+                price FLOAT,
+                timestamp TIMESTAMP
+            )
+        ''')
+        
+        # Table: triggered_alerts (as specified in requirements)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS triggered_alerts (
+                user_id TEXT,
+                commodity TEXT,
+                target_price FLOAT,
+                condition TEXT,
+                triggered_price FLOAT,
+                timestamp TIMESTAMP
+            )
+        ''')
+        
+        # Keep existing tables for backward compatibility
         # Create prices table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS prices (
@@ -37,9 +70,9 @@ class DatabaseHandler:
             )
         ''')
         
-        # Create alerts table
+        # Create alerts_v2 table
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS alerts (
+            CREATE TABLE IF NOT EXISTS alerts_v2 (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 rule_id INTEGER NOT NULL,
                 commodity TEXT NOT NULL,
@@ -111,13 +144,78 @@ class DatabaseHandler:
         conn.close()
         return df.to_dict('records')
     
+    def save_alert(self, alert_dict):
+        """Save alert rule exactly as specified"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO alerts (user_id, commodity, condition, target_price, created_at)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (
+            alert_dict.get('user_id', 'default'),
+            alert_dict['commodity'],
+            alert_dict['condition'],
+            alert_dict['target_price'],
+            datetime.now().isoformat()
+        ))
+        
+        conn.commit()
+        conn.close()
+    
+    def get_all_alerts(self):
+        """Get all alert rules exactly as specified"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM alerts')
+        columns = [description[0] for description in cursor.description]
+        alerts = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        
+        conn.close()
+        return alerts
+    
+    def log_triggered(self, triggered_alerts):
+        """Log triggered alerts exactly as specified"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        for alert in triggered_alerts:
+            cursor.execute('''
+                INSERT INTO triggered_alerts (user_id, commodity, target_price, condition, triggered_price, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (
+                alert.get('user_id', 'default'),
+                alert['commodity'],
+                alert['target_price'],
+                alert['condition'],
+                alert['triggered_price'],
+                alert['timestamp']
+            ))
+        
+        conn.commit()
+        conn.close()
+    
+    def log_price(self, commodity, price):
+        """Log price to price_logs table"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO price_logs (commodity, price, timestamp)
+            VALUES (?, ?, ?)
+        ''', (commodity, price, datetime.now().isoformat()))
+        
+        conn.commit()
+        conn.close()
+
     def insert_alert(self, alert: Alert):
         """Insert a new alert"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
         cursor.execute('''
-            INSERT INTO alerts (rule_id, commodity, price, condition, threshold, triggered_at, message)
+            INSERT INTO alerts_v2 (rule_id, commodity, price, condition, threshold, triggered_at, message)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (alert.rule_id, alert.commodity, alert.price, alert.condition, 
               alert.threshold, alert.triggered_at.isoformat(), alert.message))
@@ -129,7 +227,7 @@ class DatabaseHandler:
         """Get recent alerts"""
         conn = sqlite3.connect(self.db_path)
         
-        query = "SELECT * FROM alerts ORDER BY triggered_at DESC LIMIT ?"
+        query = "SELECT * FROM alerts_v2 ORDER BY triggered_at DESC LIMIT ?"
         df = pd.read_sql_query(query, conn, params=(limit,))
         
         conn.close()

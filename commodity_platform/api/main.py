@@ -8,7 +8,7 @@ from datetime import datetime
 
 from .models import CommodityPrice, AlertRule, Alert, PredictionRequest, PredictionResponse
 from .db import DatabaseHandler
-from .prices import PriceFetcher
+from .prices import PriceFetcher, get_latest_prices
 from .alert_logic import AlertEngine
 from .ml_model import CommodityPredictor
 
@@ -69,6 +69,15 @@ async def root():
         "timestamp": datetime.now().isoformat()
     }
 
+@app.get("/prices/latest")
+async def get_latest_prices_endpoint():
+    """Get latest prices exactly as specified in requirements"""
+    try:
+        prices = get_latest_prices()
+        return prices
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/prices/current", response_model=Dict[str, CommodityPrice])
 async def get_current_prices():
     """Get current prices for all commodities"""
@@ -96,6 +105,58 @@ async def get_price_history(commodity: str, limit: int = 100):
     try:
         prices = db_handler.get_prices(commodity=commodity, limit=limit)
         return {"commodity": commodity, "prices": prices}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/subscribe")
+async def subscribe(alert: dict):
+    """Subscribe to alert rule exactly as specified"""
+    try:
+        db_handler.save_alert(alert)
+        return {"message": "Alert subscription created successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/check-alerts")
+async def check_alerts():
+    """Check alerts exactly as specified"""
+    try:
+        current = get_latest_prices()
+        alerts = db_handler.get_all_alerts()  # Use the new method
+        triggered = []
+        
+        for alert_rule in alerts:
+            commodity = alert_rule['commodity']
+            condition = alert_rule['condition']
+            target_price = alert_rule['target_price']
+            
+            # Check if commodity exists in current prices
+            current_price = None
+            for name, price in current.items():
+                if name.lower() == commodity.lower() or commodity.lower() in name.lower():
+                    current_price = price
+                    break
+            
+            if current_price:
+                triggered_alert = False
+                if condition == "above" and current_price > target_price:
+                    triggered_alert = True
+                elif condition == "below" and current_price < target_price:
+                    triggered_alert = True
+                
+                if triggered_alert:
+                    triggered.append({
+                        "commodity": commodity,
+                        "target_price": target_price,
+                        "condition": condition,
+                        "triggered_price": current_price,
+                        "timestamp": datetime.now().isoformat()
+                    })
+        
+        # Log triggered alerts using the new method
+        db_handler.log_triggered(triggered)
+        
+        return {"triggered_alerts": triggered}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -135,6 +196,34 @@ async def get_alert_summary():
     try:
         summary = alert_engine.get_alert_summary()
         return summary
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/predict-price")
+async def predict_price(commodity: str, days: int = 3):
+    """Predict price exactly as specified in requirements"""
+    try:
+        # Get historical prices for the commodity
+        history_data = db_handler.get_historical_data(commodity, days=60)
+        
+        if len(history_data) < 60:
+            raise HTTPException(status_code=400, detail="Insufficient historical data for prediction")
+        
+        # Use the ML model to predict
+        predictions = predictor.predict_prices(commodity, days)
+        
+        if predictions:
+            # Format response exactly as specified
+            next_prices = [p['predicted_price'] for p in predictions['predictions']]
+            return {
+                "commodity": commodity,
+                "next_prices": next_prices
+            }
+        else:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"No trained model found for {commodity}"
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

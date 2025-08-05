@@ -4,6 +4,26 @@ from datetime import datetime
 from typing import Dict, Optional
 from .models import CommodityPrice
 
+# Ticker mapping as specified in requirements
+TICKERS = {
+    "Gold": "GC=F",
+    "Crude Oil": "CL=F",
+    "Natural Gas": "NG=F",
+    "Silver": "SI=F"
+}
+
+def get_latest_prices():
+    """Get latest prices exactly as specified in requirements"""
+    prices = {}
+    for name, ticker in TICKERS.items():
+        try:
+            data = yf.Ticker(ticker).history(period="1d")
+            if not data.empty:
+                prices[name] = round(data["Close"].iloc[-1], 2)
+        except Exception as e:
+            print(f"Error fetching {name}: {e}")
+    return prices
+
 class PriceFetcher:
     def __init__(self):
         # Mapping of commodity names to Yahoo Finance symbols
