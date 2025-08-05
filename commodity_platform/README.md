@@ -7,9 +7,12 @@ A comprehensive FastAPI-powered service that fetches real-time commodity prices,
 - **Real-time Price Monitoring**: Fetches live prices for Gold, Silver, Oil, and Natural Gas
 - **Intelligent Alerts**: User-configurable price threshold alerts
 - **AI Price Predictions**: LSTM-based machine learning models for price forecasting
+- **Big Data Analytics**: PySpark-powered ETL for processing 1M+ records
+- **Advanced KPIs**: Daily, weekly, monthly analytics with volatility calculations
 - **Interactive Dashboard**: Beautiful Streamlit-powered web interface
-- **Data Persistence**: SQLite database for historical data and alert management
+- **Data Persistence**: SQLite database + Parquet files for analytics
 - **RESTful API**: Complete FastAPI backend with comprehensive endpoints
+- **Scheduled ETL**: APScheduler for automated daily analytics processing
 
 ## 🏗️ Project Structure
 
@@ -22,15 +25,20 @@ commodity_platform/
 │   ├── db.py               # SQLite database handler
 │   ├── alert_logic.py      # Alert checking logic
 │   └── ml_model.py         # LSTM model training & inference
+├── analytics/              # PySpark analytics module
+│   ├── spark_etl.py        # PySpark ETL pipeline
+│   └── scheduler.py        # APScheduler for automated jobs
 ├── dashboard/              # Streamlit frontend
 │   ├── app.py              # Main dashboard application
 │   └── utils.py            # Utility functions for charts & API calls
 ├── data/
 │   ├── historical/         # Historical price data (CSV files)
+│   ├── analytics/          # PySpark output (Parquet & CSV files)
 │   └── generate_sample_data.py  # Script to generate test data
 ├── models/                 # Trained LSTM models storage
 ├── requirements.txt        # Python dependencies
 ├── README.md              # This file
+├── run_pyspark_etl.py      # Standalone PySpark ETL runner
 └── data.db                # SQLite database (created automatically)
 ```
 
@@ -43,11 +51,16 @@ cd commodity_platform
 pip install -r requirements.txt
 ```
 
-### 2. Generate Sample Data (Optional)
+### 2. Generate Sample Data & Run PySpark Analytics
 
 ```bash
+# Generate sample historical data
 cd data/historical
-python generate_sample_data.py
+python3 generate_sample_data.py
+cd ../..
+
+# Run PySpark ETL to generate analytics (1M+ records)
+python3 run_pyspark_etl.py
 ```
 
 This creates sample historical data for testing and initial model training.
@@ -121,6 +134,13 @@ The dashboard will open in your browser at `http://localhost:8501`
 - `POST /predictions/{commodity}` - Get price predictions
 - `POST /models/train/{commodity}` - Train ML model
 - `POST /models/retrain-all` - Retrain all models
+
+### Analytics Endpoints (NEW)
+- `GET /analytics/{commodity}` - Get PySpark analytics KPIs
+- `GET /analytics/{commodity}/summary` - Get comprehensive analytics summary
+- `POST /analytics/etl/run` - Trigger PySpark ETL job manually
+- `GET /analytics/etl/status` - Get ETL job status and history
+- `GET /analytics/commodities` - Get available commodities with analytics
 
 ### System Endpoints
 - `GET /health` - Health check

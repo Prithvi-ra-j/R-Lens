@@ -118,15 +118,54 @@ def demo_database_operations():
     
     print()
 
+def demo_pyspark_analytics():
+    """Demo: PySpark Analytics"""
+    print("🔹 5. PySpark Analytics Demo")
+    print("=" * 50)
+    
+    try:
+        # Check if analytics data exists
+        response = requests.get(f"{BASE_URL}/analytics/commodities")
+        if response.status_code == 200:
+            result = response.json()
+            commodities = result.get('commodities', [])
+            
+            if commodities:
+                print("✅ PySpark Analytics Data Available:")
+                print(f"   📊 Commodities with analytics: {len(commodities)}")
+                print(f"   📋 Available KPIs: {result.get('available_kpi_types', [])}")
+                
+                # Try to get analytics for first commodity
+                if commodities:
+                    commodity = commodities[0]
+                    analytics_response = requests.get(f"{BASE_URL}/analytics/{commodity}")
+                    
+                    if analytics_response.status_code == 200:
+                        analytics = analytics_response.json()
+                        print(f"   📈 Sample analytics for {commodity}:")
+                        print(f"      - Records: {analytics.get('record_count', 0)}")
+                        print(f"      - Source: {analytics.get('source', 'Unknown')}")
+            else:
+                print("⚠️ No analytics data found")
+                print("💡 Run: python3 run_pyspark_etl.py")
+        else:
+            print("❌ Analytics service unavailable")
+            
+    except Exception as e:
+        print(f"❌ Error: {e}")
+    
+    print()
+
 def demo_streamlit_dashboard():
     """Demo: Streamlit Dashboard Info"""
-    print("🔹 5. Streamlit Dashboard")
+    print("🔹 6. Streamlit Dashboard")
     print("=" * 50)
     print("📊 Dashboard Features Available:")
     print("   • Latest prices + trends (line charts)")
     print("   • Price predictions (LSTM output)")
     print("   • Triggered alerts (data from DB)")
     print("   • KPI cards (high, low, average, % change)")
+    print("   • PySpark Analytics viewer")
     print("   • Real-time auto-refresh capability")
     print()
     print("🌐 Access the dashboard at: http://localhost:8501")
@@ -165,12 +204,14 @@ def main():
     demo_alert_subscription()
     demo_ml_prediction()
     demo_database_operations()
+    demo_pyspark_analytics()
     demo_streamlit_dashboard()
     
     print("🎯 Technology Stack Verification:")
     print("=" * 50)
     print("✅ Backend: FastAPI, yfinance, SQLite, Pydantic")
     print("✅ ML: LSTM (PyTorch), NumPy, Pandas")
+    print("✅ Big Data: PySpark, Parquet, APScheduler")
     print("✅ Dashboard: Streamlit, Plotly charts")
     print("✅ Data Source: Yahoo Finance (yfinance)")
     print()

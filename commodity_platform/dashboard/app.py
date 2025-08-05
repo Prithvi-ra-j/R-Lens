@@ -24,7 +24,7 @@ api_client = get_api_client()
 st.sidebar.title("📈 Commodity Monitor")
 page = st.sidebar.selectbox(
     "Navigate to:",
-    ["Overview", "Price Charts", "Alerts", "Predictions", "Settings"]
+    ["Overview", "Price Charts", "Alerts", "Predictions", "Analytics", "Settings"]
 )
 
 # Auto-refresh option
@@ -317,6 +317,170 @@ elif page == "Predictions":
                             st.success(f"✅ {commodity.upper()} model trained successfully")
                         else:
                             st.error(f"❌ Failed to train {commodity.upper()} model")
+
+elif page == "Analytics":
+    st.title("📊 PySpark Analytics Dashboard")
+    
+    st.info("Advanced analytics powered by PySpark for large-scale data processing")
+    
+    # Check analytics status
+    try:
+        stats = api_client.get_stats()
+        analytics_status = stats.get('analytics_status', 'unavailable')
+        etl_running = stats.get('etl_scheduler_running', False)
+    except:
+        analytics_status = 'unavailable'
+        etl_running = False
+    
+    # Status indicators
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if analytics_status == 'available':
+            st.success("📊 Analytics Data: Available")
+        else:
+            st.warning("📊 Analytics Data: Not Available")
+    
+    with col2:
+        if etl_running:
+            st.success("🕒 ETL Scheduler: Running")
+        else:
+            st.warning("🕒 ETL Scheduler: Stopped")
+    
+    # Analytics controls
+    st.subheader("🛠️ Analytics Controls")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("🚀 Run ETL Job", type="primary"):
+            with st.spinner("Starting ETL job..."):
+                try:
+                    response = requests.post(f"{api_client.base_url}/analytics/etl/run?num_records=1000000")
+                    if response.status_code == 200:
+                        result = response.json()
+                        st.success("✅ ETL job started successfully!")
+                        st.json(result)
+                    else:
+                        st.error("❌ Failed to start ETL job")
+                except Exception as e:
+                    st.error(f"❌ Error: {e}")
+    
+    with col2:
+        if st.button("📈 View ETL Status"):
+            try:
+                response = requests.get(f"{api_client.base_url}/analytics/etl/status")
+                if response.status_code == 200:
+                    status = response.json()
+                    st.json(status)
+                else:
+                    st.error("Failed to get ETL status")
+            except Exception as e:
+                st.error(f"Error: {e}")
+    
+    with col3:
+        if st.button("📋 Available Commodities"):
+            try:
+                response = requests.get(f"{api_client.base_url}/analytics/commodities")
+                if response.status_code == 200:
+                    commodities = response.json()
+                    st.json(commodities)
+                else:
+                    st.error("Failed to get commodities")
+            except Exception as e:
+                st.error(f"Error: {e}")
+    
+    # Analytics viewer
+    if analytics_status == 'available':
+        st.subheader("📊 Analytics Viewer")
+        
+        # Get available commodities
+        try:
+            response = requests.get(f"{api_client.base_url}/analytics/commodities")
+            if response.status_code == 200:
+                commodities_data = response.json()
+                available_commodities = commodities_data.get('commodities', [])
+                
+                if available_commodities:
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        selected_commodity = st.selectbox(
+                            "Select Commodity:",
+                            available_commodities
+                        )
+                    
+                    with col2:
+                        kpi_type = st.selectbox(
+                            "Select KPI Type:",
+                            ["overall", "daily", "weekly", "monthly", "momentum"]
+                        )
+                    
+                    if st.button("📊 Load Analytics"):
+                        with st.spinner(f"Loading {kpi_type} analytics for {selected_commodity}..."):
+                            try:
+                                response = requests.get(
+                                    f"{api_client.base_url}/analytics/{selected_commodity}?kpi_type={kpi_type}"
+                                )
+                                
+                                if response.status_code == 200:
+                                    analytics_data = response.json()
+                                    
+                                    st.success(f"✅ Loaded {analytics_data['record_count']} records")
+                                    
+                                    # Display summary
+                                    st.json({
+                                        "commodity": analytics_data['commodity'],
+                                        "kpi_type": analytics_data['kpi_type'],
+                                        "record_count": analytics_data['record_count'],
+                                        "source": analytics_data.get('source', 'Unknown')
+                                    })
+                                    
+                                    # Display data
+                                    if analytics_data['data']:
+                                        df = pd.DataFrame(analytics_data['data'])
+                                        st.dataframe(df, use_container_width=True)
+                                        
+                                        # Show charts for some KPI types
+                                        if kpi_type == "daily" and 'avg_daily_price' in df.columns:
+                                            st.subheader("📈 Daily Average Price Trend")
+                                            chart_df = df.copy()
+                                            if 'date' in chart_df.columns:
+                                                chart_df['date'] = pd.to_datetime(chart_df['date'])
+                                                st.line_chart(chart_df.set_index('date')['avg_daily_price'])
+                                        
+                                        elif kpi_type == "overall":
+                                            st.subheader("📊 Overall Statistics")
+                                            if len(df) > 0:
+                                                row = df.iloc[0]
+                                                col1, col2, col3, col4 = st.columns(4)
+                                                
+                                                with col1:
+                                                    st.metric("Average Price", f"${row.get('overall_avg_price', 0):.2f}")
+                                                
+                                                with col2:
+                                                    st.metric("All-Time High", f"${row.get('all_time_high', 0):.2f}")
+                                                
+                                                with col3:
+                                                    st.metric("All-Time Low", f"${row.get('all_time_low', 0):.2f}")
+                                                
+                                                with col4:
+                                                    st.metric("Volatility", f"{row.get('volatility_percent', 0):.2f}%")
+                                    
+                                else:
+                                    st.error(f"❌ Failed to load analytics: {response.status_code}")
+                                    
+                            except Exception as e:
+                                st.error(f"❌ Error loading analytics: {e}")
+                
+                else:
+                    st.warning("No commodities with analytics data found")
+            
+        except Exception as e:
+            st.error(f"Error getting available commodities: {e}")
+    
+    else:
+        st.warning("Analytics data not available. Please run an ETL job first.")
 
 elif page == "Settings":
     st.title("⚙️ Settings & Configuration")
