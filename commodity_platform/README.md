@@ -127,13 +127,14 @@ The dashboard will open in your browser at `http://localhost:8501`
 - `GET /stats` - Platform statistics
 - `GET /` - API information
 
-## 🤖 Machine Learning
+## 🤖 Machine Learning (PyTorch)
 
-The platform uses LSTM (Long Short-Term Memory) neural networks for price prediction:
+The platform uses PyTorch-based LSTM (Long Short-Term Memory) neural networks for price prediction:
 
+- **Framework**: PyTorch with CUDA support (if available)
 - **Model Architecture**: 3-layer LSTM with dropout regularization
 - **Features**: Price sequences with 60-day lookback windows
-- **Training**: 80/20 train/test split with early stopping
+- **Training**: 80/20 train/test split with Adam optimizer
 - **Metrics**: RMSE, MAE, and custom accuracy scores
 - **Deployment**: Real-time inference with confidence scoring
 
@@ -141,9 +142,10 @@ The platform uses LSTM (Long Short-Term Memory) neural networks for price predic
 
 Models can be trained via:
 
-1. **API Endpoint**: `POST /models/train/{commodity}`
-2. **Dashboard**: Settings → Model Training
-3. **Programmatically**: Using the `CommodityPredictor` class
+1. **Dedicated Script**: `python3 train_pytorch_models.py` (Recommended)
+2. **API Endpoint**: `POST /models/train/{commodity}`
+3. **Dashboard**: Settings → Model Training
+4. **Programmatically**: Using the `CommodityPredictor` class
 
 ## 💾 Database Schema
 
@@ -239,7 +241,7 @@ python data/historical/generate_sample_data.py
 ### Core Dependencies
 - **FastAPI**: Modern, fast web framework
 - **Streamlit**: Interactive web dashboard
-- **TensorFlow**: Machine learning framework
+- **PyTorch**: Machine learning framework with GPU support
 - **Pandas**: Data manipulation and analysis
 - **Plotly**: Interactive charts and visualizations
 - **YFinance**: Financial data provider

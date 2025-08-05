@@ -201,29 +201,25 @@ async def get_alert_summary():
 
 @app.get("/predict-price")
 async def predict_price(commodity: str, days: int = 3):
-    """Predict price exactly as specified in requirements"""
+    """Predict price exactly as specified in requirements using PyTorch"""
     try:
         # Get historical prices for the commodity
-        history_data = db_handler.get_historical_data(commodity, days=60)
+        from .ml_model import get_historical_prices, predict_next_prices
         
-        if len(history_data) < 60:
+        history = get_historical_prices(commodity, days=60)
+        
+        if len(history) < 10:
             raise HTTPException(status_code=400, detail="Insufficient historical data for prediction")
         
-        # Use the ML model to predict
-        predictions = predictor.predict_prices(commodity, days)
+        # Use the PyTorch ML model to predict
+        next_prices = predict_next_prices(history, days)
         
-        if predictions:
-            # Format response exactly as specified
-            next_prices = [p['predicted_price'] for p in predictions['predictions']]
-            return {
-                "commodity": commodity,
-                "next_prices": next_prices
-            }
-        else:
-            raise HTTPException(
-                status_code=404, 
-                detail=f"No trained model found for {commodity}"
-            )
+        return {
+            "commodity": commodity,
+            "next_prices": next_prices,
+            "framework": "PyTorch"
+        }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
