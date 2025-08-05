@@ -12,6 +12,13 @@ from .prices import PriceFetcher, get_latest_prices
 from .alert_logic import AlertEngine
 from .ml_model import CommodityPredictor
 
+# Import analytics modules
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from analytics.spark_etl import CommoditySparkETL
+from analytics.scheduler import get_scheduler, start_scheduler
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Commodity Price Monitoring API",
@@ -33,6 +40,10 @@ db_handler = DatabaseHandler()
 price_fetcher = PriceFetcher()
 alert_engine = AlertEngine(db_handler)
 predictor = CommodityPredictor()
+
+# Initialize analytics services
+analytics_etl = None
+etl_scheduler = None
 
 # Background task for periodic price updates
 async def update_prices_background():
@@ -57,8 +68,30 @@ async def update_prices_background():
 # Start background task on startup
 @app.on_event("startup")
 async def startup_event():
+    global etl_scheduler
+    
     # Start background price monitoring
     asyncio.create_task(update_prices_background())
+    
+    # Start ETL scheduler
+    try:
+        etl_scheduler = start_scheduler()
+        print("✅ ETL Scheduler started successfully")
+    except Exception as e:
+        print(f"⚠️ Warning: Could not start ETL scheduler: {e}")
+        print("PySpark analytics will not be available")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global etl_scheduler
+    
+    # Stop ETL scheduler
+    if etl_scheduler:
+        try:
+            etl_scheduler.stop()
+            print("✅ ETL Scheduler stopped")
+        except Exception as e:
+            print(f"Warning: Error stopping ETL scheduler: {e}")
 
 # API Endpoints
 @app.get("/")
@@ -312,13 +345,276 @@ async def get_stats():
         commodities = list(set([p['commodity'] for p in all_prices]))
         total_prices = len(all_prices)
         
+        # Get analytics status
+        analytics_status = "unavailable"
+        analytics_path = "/workspace/commodity_platform/data/analytics"
+        if os.path.exists(os.path.join(analytics_path, "overall_kpis")):
+            analytics_status = "available"
+        
         return {
             "total_price_records": total_prices,
             "supported_commodities": commodities,
             "active_alert_rules": alert_summary['active_rules_count'],
             "alerts_today": alert_summary['total_alerts_today'],
-            "available_models": list(predictor.models.keys())
+            "available_models": list(predictor.models.keys()),
+            "analytics_status": analytics_status,
+            "etl_scheduler_running": etl_scheduler.scheduler.running if etl_scheduler else False
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Analytics Endpoints
+@app.get("/analytics/{commodity}")
+async def get_commodity_analytics(commodity: str, kpi_type: str = "overall"):
+    """Get PySpark analytics KPIs for a specific commodity"""
+    try:
+        # Validate kpi_type
+        valid_kpi_types = ["overall", "daily", "weekly", "monthly", "momentum"]
+        if kpi_type not in valid_kpi_types:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Invalid kpi_type. Must be one of: {valid_kpi_types}"
+            )
+        
+        # Try to load analytics data using file system (faster than Spark for API)
+        analytics_path = "/workspace/commodity_platform/data/analytics"
+        parquet_path = os.path.join(analytics_path, f"{kpi_type}_kpis")
+        
+        if not os.path.exists(parquet_path):
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Analytics data not found. Please run ETL job first: POST /analytics/etl/run"
+            )
+        
+        # Load data using pandas for faster API response
+        import pandas as pd
+        
+        # Read parquet files
+        try:
+            df = pd.read_parquet(parquet_path)
+            
+            # Filter for specific commodity
+            commodity_data = df[df['commodity'].str.upper() == commodity.upper()]
+            
+            if commodity_data.empty:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No analytics data found for commodity: {commodity}"
+                )
+            
+            # Convert to dict and return
+            data = commodity_data.to_dict('records')
+            
+            return {
+                "commodity": commodity.upper(),
+                "kpi_type": kpi_type,
+                "data": data,
+                "record_count": len(data),
+                "generated_at": datetime.now().isoformat(),
+                "source": "PySpark ETL"
+            }
+            
+        except Exception as e:
+            # Fallback to Spark if pandas fails
+            global analytics_etl
+            if analytics_etl is None:
+                analytics_etl = CommoditySparkETL()
+            
+            result = analytics_etl.load_analytics_data(commodity, kpi_type)
+            
+            if result is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No analytics data found for {commodity}"
+                )
+            
+            return result
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error loading analytics: {str(e)}")
+
+@app.get("/analytics/{commodity}/summary")
+async def get_commodity_analytics_summary(commodity: str):
+    """Get comprehensive analytics summary for a commodity"""
+    try:
+        analytics_path = "/workspace/commodity_platform/data/analytics"
+        
+        # Check if analytics data exists
+        if not os.path.exists(analytics_path):
+            raise HTTPException(
+                status_code=404,
+                detail="Analytics data not available. Run ETL job first."
+            )
+        
+        summary = {}
+        kpi_types = ["overall", "daily", "weekly", "monthly", "momentum"]
+        
+        import pandas as pd
+        
+        for kpi_type in kpi_types:
+            parquet_path = os.path.join(analytics_path, f"{kpi_type}_kpis")
+            
+            if os.path.exists(parquet_path):
+                try:
+                    df = pd.read_parquet(parquet_path)
+                    commodity_data = df[df['commodity'].str.upper() == commodity.upper()]
+                    
+                    if not commodity_data.empty:
+                        # Get latest record for summary
+                        latest_record = commodity_data.iloc[-1].to_dict()
+                        summary[kpi_type] = latest_record
+                        
+                except Exception as e:
+                    summary[kpi_type] = {"error": str(e)}
+        
+        if not summary:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No analytics data found for commodity: {commodity}"
+            )
+        
+        return {
+            "commodity": commodity.upper(),
+            "summary": summary,
+            "generated_at": datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/analytics/etl/run")
+async def run_etl_job(background_tasks: BackgroundTasks, num_records: int = 1000000):
+    """Trigger PySpark ETL job manually"""
+    try:
+        def run_etl():
+            """Background function to run ETL"""
+            try:
+                etl = CommoditySparkETL(app_name="ManualETL")
+                success = etl.run_etl_pipeline(use_sample_data=True, num_records=num_records)
+                
+                # Log the result
+                import json
+                log_entry = {
+                    "job": "manual_etl",
+                    "status": "SUCCESS" if success else "FAILED",
+                    "start_time": datetime.now().isoformat(),
+                    "num_records": num_records,
+                    "triggered_by": "API"
+                }
+                
+                log_file = "/workspace/commodity_platform/data/analytics/manual_etl_log.json"
+                os.makedirs(os.path.dirname(log_file), exist_ok=True)
+                
+                # Save log
+                if os.path.exists(log_file):
+                    with open(log_file, 'r') as f:
+                        logs = json.load(f)
+                else:
+                    logs = []
+                
+                logs.append(log_entry)
+                logs = logs[-50:]  # Keep last 50 entries
+                
+                with open(log_file, 'w') as f:
+                    json.dump(logs, f, indent=2)
+                    
+            except Exception as e:
+                print(f"ETL job failed: {e}")
+        
+        # Add to background tasks
+        background_tasks.add_task(run_etl)
+        
+        return {
+            "message": "ETL job started in background",
+            "num_records": num_records,
+            "estimated_duration": "2-5 minutes",
+            "status_endpoint": "/analytics/etl/status"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/analytics/etl/status")
+async def get_etl_status():
+    """Get ETL job status and history"""
+    try:
+        global etl_scheduler
+        
+        status_info = {
+            "scheduler_running": False,
+            "scheduled_jobs": [],
+            "manual_job_history": []
+        }
+        
+        # Get scheduler status
+        if etl_scheduler:
+            scheduler_status = etl_scheduler.get_job_status()
+            status_info["scheduler_running"] = scheduler_status.get("scheduler_running", False)
+            status_info["scheduled_jobs"] = scheduler_status.get("jobs", [])
+        
+        # Get manual job history
+        manual_log_file = "/workspace/commodity_platform/data/analytics/manual_etl_log.json"
+        if os.path.exists(manual_log_file):
+            with open(manual_log_file, 'r') as f:
+                status_info["manual_job_history"] = json.load(f)
+        
+        # Get analytics files info
+        analytics_path = "/workspace/commodity_platform/data/analytics"
+        analytics_files = []
+        
+        if os.path.exists(analytics_path):
+            for item in os.listdir(analytics_path):
+                item_path = os.path.join(analytics_path, item)
+                if os.path.isdir(item_path) and item.endswith('_kpis'):
+                    # Get file stats
+                    size = sum(
+                        os.path.getsize(os.path.join(item_path, f))
+                        for f in os.listdir(item_path)
+                        if os.path.isfile(os.path.join(item_path, f))
+                    )
+                    analytics_files.append({
+                        "name": item,
+                        "size_mb": round(size / (1024 * 1024), 2),
+                        "last_modified": datetime.fromtimestamp(
+                            os.path.getmtime(item_path)
+                        ).isoformat()
+                    })
+        
+        status_info["analytics_files"] = analytics_files
+        
+        return status_info
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/analytics/commodities")
+async def get_available_analytics_commodities():
+    """Get list of commodities with available analytics data"""
+    try:
+        analytics_path = "/workspace/commodity_platform/data/analytics"
+        overall_kpis_path = os.path.join(analytics_path, "overall_kpis")
+        
+        if not os.path.exists(overall_kpis_path):
+            return {
+                "commodities": [],
+                "message": "No analytics data available. Run ETL job first."
+            }
+        
+        # Read parquet to get available commodities
+        import pandas as pd
+        df = pd.read_parquet(overall_kpis_path)
+        commodities = sorted(df['commodity'].unique().tolist())
+        
+        return {
+            "commodities": commodities,
+            "total_count": len(commodities),
+            "available_kpi_types": ["overall", "daily", "weekly", "monthly", "momentum"]
+        }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
