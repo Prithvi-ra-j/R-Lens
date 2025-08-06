@@ -5,7 +5,7 @@ from typing import List, Optional
 from .models import CommodityPrice, AlertRule, Alert
 
 class DatabaseHandler:
-    def __init__(self, db_path: str = "/workspace/commodity_platform/data.db"):
+    def __init__(self, db_path: str = "commodity_platform/data.db"):
         self.db_path = db_path
         self.init_database()
     

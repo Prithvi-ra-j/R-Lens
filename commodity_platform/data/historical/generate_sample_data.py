@@ -74,12 +74,12 @@ def create_sample_data():
         
         # Save individual CSV files
         df = pd.DataFrame(prices)
-        csv_path = f"/workspace/commodity_platform/data/historical/{commodity}_historical.csv"
+        csv_path = f"commodity_platform/data/historical/{commodity}_historical.csv"
         df.to_csv(csv_path, index=False)
         print(f"    Saved {len(prices)} records to {csv_path}")
     
     # Save combined data to database
-    db_path = "/workspace/commodity_platform/data.db"
+    db_path = "commodity_platform/data.db"
     print(f"\nInserting data into database: {db_path}")
     
     # Create database if it doesn't exist
@@ -111,7 +111,7 @@ def create_sample_data():
     
     # Create summary CSV
     summary_df = pd.DataFrame(all_data)
-    summary_path = "/workspace/commodity_platform/data/historical/all_commodities_historical.csv"
+    summary_path = "commodity_platform/data/historical/all_commodities_historical.csv"
     summary_df.to_csv(summary_path, index=False)
     print(f"Saved combined data to {summary_path}")
     
@@ -120,7 +120,7 @@ def create_sample_data():
 def create_sample_alerts():
     """Create some sample alert rules"""
     
-    db_path = "/workspace/commodity_platform/data.db"
+    db_path = "commodity_platform/data.db"
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
@@ -161,7 +161,7 @@ def create_sample_alerts():
 
 if __name__ == "__main__":
     # Ensure directories exist
-    os.makedirs("/workspace/commodity_platform/data/historical", exist_ok=True)
+    os.makedirs("commodity_platform/data/historical", exist_ok=True)
     
     # Generate sample data
     data = create_sample_data()
@@ -171,8 +171,8 @@ if __name__ == "__main__":
     
     print("\n✅ Sample data generation completed!")
     print("\nGenerated files:")
-    print("  - /workspace/commodity_platform/data.db (SQLite database)")
-    print("  - /workspace/commodity_platform/data/historical/*.csv (CSV files)")
+    print("  - commodity_platform/data.db (SQLite database)")
+    print("  - commodity_platform/data/historical/*.csv (CSV files)")
     print(f"\nTotal records: {len(data)}")
     
     # Show summary statistics

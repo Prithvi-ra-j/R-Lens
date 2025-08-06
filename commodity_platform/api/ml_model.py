@@ -54,7 +54,7 @@ def load_pytorch_model(model_path):
         return False
 
 # Try to load existing model
-model_path = "/workspace/commodity_platform/models/lstm_model_pytorch.pth"
+model_path = "commodity_platform/models/lstm_model_pytorch.pth"
 if os.path.exists(model_path):
     load_pytorch_model(model_path)
 
@@ -111,7 +111,7 @@ def predict_next_prices(history, n_days=3):
         return [100.0] * n_days
 
 class CommodityPredictor:
-    def __init__(self, model_path: str = "/workspace/commodity_platform/models"):
+    def __init__(self, model_path: str = "commodity_platform/models"):
         self.model_path = model_path
         self.models = {}
         self.scalers = {}

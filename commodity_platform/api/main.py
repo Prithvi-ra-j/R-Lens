@@ -6,7 +6,7 @@ import schedule
 import time
 from datetime import datetime
 
-from .models import CommodityPrice, AlertRule, Alert, PredictionRequest, PredictionResponse
+from api.models import CommodityPrice, AlertRule, Alert, PredictionRequest, PredictionResponse
 from .db import DatabaseHandler
 from .prices import PriceFetcher, get_latest_prices
 from .alert_logic import AlertEngine

@@ -307,16 +307,16 @@ elif page == "Predictions":
             st.info("Select a commodity and click 'Generate Prediction' to see forecasts")
             
             # Show model training status
-            st.subheader("Model Training")
+            # st.subheader("Model Training")
             
-            if st.button("Train Models"):
-                with st.spinner("Training models... This may take several minutes."):
-                    for commodity in ["gold", "silver", "oil", "gas"]:
-                        result = api_client.train_model(commodity)
-                        if result:
-                            st.success(f"✅ {commodity.upper()} model trained successfully")
-                        else:
-                            st.error(f"❌ Failed to train {commodity.upper()} model")
+            # if st.button("Train Models"):
+            #     with st.spinner("Training models... This may take several minutes."):
+            #         for commodity in ["gold", "silver", "oil", "gas"]:
+            #             result = api_client.train_model(commodity)
+            #             if result:
+            #                 st.success(f"✅ {commodity.upper()} model trained successfully")
+            #             else:
+            #                 st.error(f"❌ Failed to train {commodity.upper()} model")
 
 elif page == "Analytics":
     st.title("📊 PySpark Analytics Dashboard")
@@ -485,7 +485,7 @@ elif page == "Analytics":
 elif page == "Settings":
     st.title("⚙️ Settings & Configuration")
     
-    tab1, tab2, tab3 = st.tabs(["API Configuration", "Data Management", "Model Training"])
+    tab1, tab2 = st.tabs(["API Configuration", "Data Management"])
     
     with tab1:
         st.subheader("API Settings")
@@ -521,39 +521,39 @@ elif page == "Settings":
             with col3:
                 st.metric("Available Models", len(stats.get('available_models', [])))
     
-    with tab3:
-        st.subheader("ML Model Management")
+    # with tab3:
+    #     st.subheader("ML Model Management")
         
-        st.warning("Model training requires sufficient historical data and may take several minutes.")
+    #     st.warning("Model training requires sufficient historical data and may take several minutes.")
         
-        col1, col2 = st.columns(2)
+    #     col1, col2 = st.columns(2)
         
-        with col1:
-            st.write("**Individual Model Training:**")
-            train_commodity = st.selectbox("Select commodity to train:", ["gold", "silver", "oil", "gas"])
+    #     with col1:
+    #         st.write("**Individual Model Training:**")
+    #         train_commodity = st.selectbox("Select commodity to train:", ["gold", "silver", "oil", "gas"])
             
-            if st.button(f"Train {train_commodity.upper()} Model"):
-                with st.spinner(f"Training {train_commodity} model..."):
-                    result = api_client.train_model(train_commodity)
-                    if result:
-                        st.success(f"✅ {train_commodity.upper()} model trained successfully")
-                        st.json(result)
-                    else:
-                        st.error(f"❌ Failed to train {train_commodity.upper()} model")
+    #         if st.button(f"Train {train_commodity.upper()} Model"):
+    #             with st.spinner(f"Training {train_commodity} model..."):
+    #                 result = api_client.train_model(train_commodity)
+    #                 if result:
+    #                     st.success(f"✅ {train_commodity.upper()} model trained successfully")
+    #                     st.json(result)
+    #                 else:
+    #                     st.error(f"❌ Failed to train {train_commodity.upper()} model")
         
-        with col2:
-            st.write("**Batch Model Training:**")
-            st.info("This will retrain all models sequentially")
+    #     with col2:
+    #         st.write("**Batch Model Training:**")
+    #         st.info("This will retrain all models sequentially")
             
-            if st.button("Train All Models", type="primary"):
-                with st.spinner("Training all models... This will take several minutes."):
-                    # Note: In a real implementation, you'd call a batch training endpoint
-                    for commodity in ["gold", "silver", "oil", "gas"]:
-                        result = api_client.train_model(commodity)
-                        if result:
-                            st.success(f"✅ {commodity.upper()} model trained")
-                        else:
-                            st.error(f"❌ {commodity.upper()} model training failed")
+    #         if st.button("Train All Models", type="primary"):
+    #             with st.spinner("Training all models... This will take several minutes."):
+    #                 # Note: In a real implementation, you'd call a batch training endpoint
+    #                 for commodity in ["gold", "silver", "oil", "gas"]:
+    #                     result = api_client.train_model(commodity)
+    #                     if result:
+    #                         st.success(f"✅ {commodity.upper()} model trained")
+    #                     else:
+    #                         st.error(f"❌ {commodity.upper()} model training failed")
 
 # Footer
 st.sidebar.markdown("---")

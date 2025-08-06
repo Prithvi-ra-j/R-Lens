@@ -6,7 +6,7 @@ This script trains LSTM models using PyTorch for all supported commodities.
 
 import sys
 import os
-sys.path.append('/workspace/commodity_platform')
+sys.path.append('commodity_platform')
 
 from api.db import DatabaseHandler
 from api.ml_model import CommodityPredictor
@@ -119,7 +119,7 @@ def show_model_info():
     print("\n📁 PyTorch Model Files")
     print("=" * 50)
     
-    model_dir = "/workspace/commodity_platform/models"
+    model_dir = "commodity_platform/models"
     if not os.path.exists(model_dir):
         print("❌ Models directory not found")
         return

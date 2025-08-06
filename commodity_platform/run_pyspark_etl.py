@@ -11,6 +11,8 @@ from datetime import datetime
 
 # Add the project root to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+os.environ["SPARK_HOME"] = os.path.expanduser("~/spark")
+os.environ["JAVA_HOME"] = "/usr/lib/jvm/java-11-openjdk-amd64"
 
 from analytics.spark_etl import CommoditySparkETL
 

@@ -117,7 +117,7 @@ class ETLScheduler:
         # Save notification to file (could be extended to database, webhook, etc.)
         try:
             import json
-            log_file = "/workspace/commodity_platform/data/analytics/job_log.json"
+            log_file = "/commodity_platform/data/analytics/job_log.json"
             
             # Load existing logs
             if os.path.exists(log_file):
